@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="referrer" content="no-referrer"><meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>FinFlow</title>
+<style>
+:root{--bg:#EEF2F4;--s:#fff;--ink:#12202B;--mut:#5E6E7A;--ln:#D9E1E6;--e:#0E7C7B;--eb:#DDF1F0;--d:#E4572E;--db:#FDE6DE;--m:#9A6A00;--mb:#FFF0CC}
+@media(prefers-color-scheme:dark){:root{--bg:#0D161D;--s:#15222C;--ink:#E8EEF2;--mut:#93A3AF;--ln:#25353F;--e:#3CC4BF;--eb:#12373A;--d:#FF7A55;--db:#3E2219;--m:#F2B84B;--mb:#3B2E10}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,sans-serif;line-height:1.45}
+.app{max-width:480px;margin:0 auto;padding:calc(16px + env(safe-area-inset-top,0px)) 16px calc(90px + env(safe-area-inset-bottom,0px))}
+h1{font-size:1.6rem;margin:0 0 12px;letter-spacing:-.03em}.lbl{color:var(--mut);font-size:.85rem}
+.card{background:var(--s);border:1px solid var(--ln);border-radius:18px;padding:18px;margin-bottom:12px}
+.big{font-size:2.3rem;font-weight:800;letter-spacing:-.04em;line-height:1.1}
+.meter{position:relative;height:12px;border-radius:6px;background:var(--ln);margin:12px 0 4px}.meter i{position:absolute;inset:0 auto 0 0;border-radius:6px}
+.weeks{display:flex;gap:8px;overflow-x:auto;margin-bottom:12px}.weeks button{flex:none;border:1px solid var(--ln);background:var(--s);color:var(--ink);border-radius:12px;padding:8px 14px;font:inherit;cursor:pointer}
+.weeks button[aria-pressed=true]{background:var(--ink);color:var(--bg)}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}.pair div{border-radius:12px;padding:10px 12px}
+.pe{background:var(--eb);color:var(--e)}.pd{background:var(--db);color:var(--d)}.pair b{display:block;font-size:1.1rem}
+.msg{border-radius:18px;padding:16px;margin-bottom:12px;border:1px solid}.msg p{margin:6px 0 0;color:var(--ink)}
+.good{background:var(--eb);border-color:var(--e)}.mid{background:var(--mb);border-color:var(--m)}.bad{background:var(--db);border-color:var(--d)}
+.who{font-size:.8rem;font-weight:700}.chart{display:flex;align-items:flex-end;gap:12px;height:140px;margin-top:10px}
+.col{flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%;text-align:center;font-size:.75rem;color:var(--mut)}
+nav{position:fixed;inset:auto 0 0 0;background:var(--s);border-top:1px solid var(--ln);display:flex;gap:8px;padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px))}
+nav button{flex:1;border:0;background:none;color:var(--mut);font:inherit;padding:10px;border-radius:12px;cursor:pointer}nav button[aria-selected=true]{background:var(--bg);color:var(--ink);font-weight:700}
+</style></head><body><div class="app"><h1 id="t">FinFlow</h1><div id="sem"></div><div id="mes" hidden></div></div>
+<nav><button aria-selected="true" data-v="sem">Semana</button><button aria-selected="false" data-v="mes">Mês</button></nav>
+<script>
+const T="{{ token }}",R=v=>v.toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0});
+const EM={good:'🟢 Ótima',mid:'🟡 Atenção',bad:'🔴 Alerta'};
+const msg=(m,t)=>`<div class="msg ${m.tom}"><div class="who">${EM[m.tom]} · ${t}</div><p>${m.texto}</p></div>`;
+const meter=(v,max,c)=>`<div class="meter"><i style="width:${Math.min(100,v/max*100)}%;background:var(--${c})"></i></div>`;
+const pair=(e,d)=>`<div class="pair"><div class="pe">Essenciais<b>${R(e)}</b></div><div class="pd">Desnecessários<b>${R(d)}</b></div></div>`;
+let D,sel;
+function sem(){const w=D.semanas[sel],o=w.d>D.lim_sem;
+ document.getElementById('sem').innerHTML=`<div class="weeks">${D.semanas.map((x,k)=>`<button aria-pressed="${k==sel}" data-k="${k}">Semana ${k+1}<br><small>${x.p}</small></button>`).join('')}</div>
+ <div class="card"><div class="lbl">Desnecessário · limite ${R(D.lim_sem)}</div><div class="big">${R(w.d)}</div>${meter(w.d,D.lim_sem*1.5,o?'d':'e')}${pair(w.e,w.d)}</div>
+ <div class="card"><div class="lbl">Investido · meta ${R(D.meta_sem)}</div><div class="big">${R(w.i)}</div>${meter(w.i,D.meta_sem,'e')}</div>
+ ${msg(w,w.f?'Enviada no Telegram':'Prévia da semana')}`}
+function mes(){const m=D.mes,mx=Math.max(1,...D.semanas.map(w=>w.e+w.d));
+ document.getElementById('mes').innerHTML=`<div class="card"><div class="lbl">Total gasto no mês</div><div class="big">${R(m.e+m.d)}</div>${pair(m.e,m.d)}</div>
+ <div class="card"><div class="lbl">Semana a semana</div><div class="chart">${D.semanas.map((w,k)=>`<div class="col"><div style="height:${w.d/mx*100}px;background:var(--d)"></div><div style="height:${w.e/mx*100}px;background:var(--e)"></div>S${k+1}</div>`).join('')}</div></div>
+ <div class="card"><div class="lbl">Investido · meta ${R(D.meta_mes)}</div><div class="big">${R(m.i)}</div>${meter(m.i,D.meta_mes,'e')}</div>
+ <div class="card"><div class="lbl">Seus desnecessários em 1 ano no CDB</div><div class="big">${R(m.rend)}</div></div>${msg(m,'Resumo do mês')}`}
+document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+ if(b.dataset.k){sel=+b.dataset.k;sem()}
+ if(b.dataset.v){document.querySelectorAll('nav button').forEach(x=>x.setAttribute('aria-selected',x===b));
+  document.getElementById('sem').hidden=b.dataset.v!='sem';document.getElementById('mes').hidden=b.dataset.v!='mes'}});
+fetch('/api/resumo',{headers:{'X-Token':T}}).then(r=>r.json()).then(d=>{D=d;sel=d.semanas.length-1;document.getElementById('t').textContent='Olá, '+(d.nome||'');sem();mes()})
+ .catch(()=>document.getElementById('t').textContent='Link inválido');
+</script></body></html>
